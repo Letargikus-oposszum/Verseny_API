@@ -1,9 +1,8 @@
 using FirstWebApi.Database;
 using FirstWebApi.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Net;
+using System.Net.Http.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,8 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
 builder.Services.AddAuthorization();
+builder.Services.AddHttpClient();
 
 var connectionString = Environment.GetEnvironmentVariable("DefaultConnectionString")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
@@ -62,22 +61,26 @@ app.MapGet("/get/{id}", async (ApplicationDbContext db, int id) =>
         Longitude = wastePoint.Longitude
     };
 });
-app.MapPost("/import-data", async (ApplicationDbContext db, IHttpClientFactory clientFactory) =>
+app.MapGet("/import-data", async (ApplicationDbContext db, IHttpClientFactory clientFactory) =>
 {
     try
     {
-        // Use IHttpClientFactory to create an HttpClient instance
         var client = clientFactory.CreateClient();
 
-        // Fetch data from the external API
-        var response = await client.GetAsync("https://map.mohu.hu/api/Map/SearchWastePoints");
+        var data = new
+        {
+            coordinates = new { latitude = 0, longitude = 0 },
+            wastePointTypes = new List<int>(),
+            wasteCategories = new List<int>(),
+            hideDrsPoints = false
+        };
+        var response = await client.PostAsJsonAsync("https://map.mohu.hu/api/Map/SearchWastePoints", data);
 
         if (!response.IsSuccessStatusCode)
         {
-            return Results.StatusCode((int)response.StatusCode); // If the API request fails, return the status code
+            return Results.StatusCode((int)response.StatusCode);
         }
 
-        // Read the response content into a list of ExternalWastePointModel objects
         var externalData = await response.Content.ReadFromJsonAsync<List<ExternalWastePointModel>>();
 
         if (externalData == null || !externalData.Any())
