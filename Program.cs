@@ -123,7 +123,6 @@ app.MapPost("/create", async (ApplicationDbContext db, TestDataCreateModel model
 {
     var newTestData = new FirstWebApi.Database.WastePoint
     {
-        Id = model.Id,
         Name = model.Name,
         Description = model.Description,
         Address = model.Address,
