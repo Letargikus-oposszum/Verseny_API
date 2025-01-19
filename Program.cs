@@ -55,6 +55,7 @@ app.MapGet("/get/{id}", async (ApplicationDbContext db, int id) =>
     { 
         Id = wastePoint.Id,
         Name = wastePoint.Name,
+        Category = wastepoint.Category,
         Description = wastePoint.Description,
         Address = wastePoint.Address,
         Latitude = wastePoint.Latitude,
@@ -93,6 +94,7 @@ app.MapGet("/import-data", async (ApplicationDbContext db, IHttpClientFactory cl
         {
             Id = d.Id, // Ensure the external ID is correctly mapped to your DB schema
             Name = d.Name,
+            Category = d.Category,
             Latitude = d.Latitude,
             Longitude = d.Longitude,
             Address = d.Address,
@@ -124,6 +126,7 @@ app.MapPost("/create", async (ApplicationDbContext db, TestDataCreateModel model
     var newTestData = new FirstWebApi.Database.WastePoint
     {
         Name = model.Name,
+        Category = model.Category,
         Description = model.Description,
         Address = model.Address,
         Latitude = model.Latitude,
@@ -141,6 +144,7 @@ app.MapPut("/update", async (ApplicationDbContext db, TestDataUpdateModel model)
         return Results.NotFound();
 
     wastePoint.Name = model.Name;
+    wastePoint.Category = model.Category,
     wastePoint.Description = model.Description;
     wastePoint.Address = model.Address;
     wastePoint.Latitude = model.Latitude;
