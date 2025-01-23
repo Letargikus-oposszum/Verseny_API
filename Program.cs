@@ -2,7 +2,9 @@ using FirstWebApi.Database;
 using FirstWebApi.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,7 +57,7 @@ app.MapGet("/get/{id}", async (ApplicationDbContext db, int id) =>
     { 
         Id = wastePoint.Id,
         Name = wastePoint.Name,
-        Category = wastepoint.Category,
+        //Category = wastepoint.Category,
         Description = wastePoint.Description,
         Address = wastePoint.Address,
         Latitude = wastePoint.Latitude,
@@ -82,7 +84,11 @@ app.MapGet("/import-data", async (ApplicationDbContext db, IHttpClientFactory cl
             return Results.StatusCode((int)response.StatusCode);
         }
 
-        var externalData = await response.Content.ReadFromJsonAsync<List<ExternalWastePointModel>>();
+        var responseString = await response.Content.ReadAsStringAsync();
+        var externalData = await response.Content.ReadFromJsonAsync<List<ExternalWastePointModel>>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
 
         if (externalData == null || !externalData.Any())
         {
@@ -92,23 +98,16 @@ app.MapGet("/import-data", async (ApplicationDbContext db, IHttpClientFactory cl
         // Map external data to the local WastePoint model
         var wastePoints = externalData.Select(d => new WastePoint
         {
-            Id = d.Id, // Ensure the external ID is correctly mapped to your DB schema
-            Name = d.Name,
-            Category = d.Category,
-            Latitude = d.Latitude,
-            Longitude = d.Longitude,
+            //Id = d.Id, // Ensure the external ID is correctly mapped to your DB schema
+            Name = d.Name ?? string.Empty,
+            Category = d.Types.First(),
+            Latitude = d.Coordinates.Latitude,
+            Longitude = d.Coordinates.Longitude,
             Address = d.Address,
-            Description = d.Description
+            Description = string.Empty
         }).ToList();
 
-        // Optional: Avoid duplicate entries based on unique fields (e.g., Id)
-        foreach (var point in wastePoints)
-        {
-            if (!db.WastePoints.Any(existing => existing.Id == point.Id)) // Check if the point already exists in the database
-            {
-                db.WastePoints.Add(point); // Add the new waste point if it does not exist
-            }
-        }
+        db.WastePoints.AddRange(wastePoints);
 
         // Save changes to the database
         await db.SaveChangesAsync();
@@ -126,7 +125,7 @@ app.MapPost("/create", async (ApplicationDbContext db, TestDataCreateModel model
     var newTestData = new FirstWebApi.Database.WastePoint
     {
         Name = model.Name,
-        Category = model.Category,
+        //Category = model.Category,
         Description = model.Description,
         Address = model.Address,
         Latitude = model.Latitude,
@@ -144,7 +143,7 @@ app.MapPut("/update", async (ApplicationDbContext db, TestDataUpdateModel model)
         return Results.NotFound();
 
     wastePoint.Name = model.Name;
-    wastePoint.Category = model.Category,
+    //wastePoint.Category = model.Category,
     wastePoint.Description = model.Description;
     wastePoint.Address = model.Address;
     wastePoint.Latitude = model.Latitude;
